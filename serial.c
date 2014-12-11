@@ -5,10 +5,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-void error_message(char * message,int error)
-{
-    printf("ERROR: %s",message);
-}
 int
 set_interface_attribs (int fd, int speed, int parity)
 {
@@ -16,7 +12,7 @@ set_interface_attribs (int fd, int speed, int parity)
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
         {
-                error_message ("error %d from tcgetattr", errno);
+                error("error from tcgetattr");
                 return -1;
         }
 
@@ -30,8 +26,8 @@ set_interface_attribs (int fd, int speed, int parity)
         tty.c_lflag = 0;                // no signaling chars, no echo,
                                         // no canonical processing
         tty.c_oflag = 0;                // no remapping, no delays
-        tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VMIN]  = 1;            // read doesn't block
+        tty.c_cc[VTIME] = 2;            // 0.5 seconds read timeout
 
         tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
@@ -44,7 +40,7 @@ set_interface_attribs (int fd, int speed, int parity)
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
         {
-                error_message ("error %d from tcsetattr", errno);
+                error("error from tcsetattr");
                 return -1;
         }
         return 0;
@@ -57,42 +53,40 @@ set_blocking (int fd, int should_block)
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
         {
-                error_message ("error %d from tggetattr", errno);
+                error ("error %d from tggetattr", errno);
                 return;
         }
 
         tty.c_cc[VMIN]  = should_block ? 1 : 0;
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VTIME] = 0;            // 0.5 seconds read timeout
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
-                error_message ("error %d setting term attributes", errno);
+                error("error setting term attributes");
 }
 
-int main()
+int set_up_port(char * portname)
 {
 
-char *portname = "/dev/ttyO1";
-
-int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
-if (fd < 0)
-{
-        error_message ("error %d opening %s: %s", errno);//o, portname, strerror (errno));
+    int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0)
+    {
+        error ("error %d opening %s: %s", errno);//o, portname, strerror (errno));
         return;
-}
+    }
 
-set_interface_attribs (fd, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-set_blocking (fd, 0);                // set no blocking
+    set_interface_attribs (fd, B9600, 0);  // set speed to 9,600 bps, 8n1 (no parity)
+    set_blocking (fd, 0);                // set no blocking
 
-write (fd, "hello!\n", 7);           // send 7 character greeting
+    write (fd, "GVF\n", 4);           // send 7 character greeting
 
-usleep ((7 + 25) * 100);             // sleep enough to transmit the 7 plus
+    usleep ((4 + 25) * 10);             // sleep enough to transmit the 7 plus
 
-while(1){  
     write (fd,"GVF\n",4);        // receive 25:  approx 100 uS per char transmit
-    usleep(100000);
+    usleep(100);
     char buf [100];
+
     int n = read (fd, buf, sizeof buf);  // read up to 100 characters if ready to read
     printf(buf);
-}
-return 0;
+
+    return fd;
 }

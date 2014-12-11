@@ -22,7 +22,7 @@
 */
 struct camera_settings
 {
-    //*serial serialPort;
+    int port_fd;
     int format;
     /*
     0: 1920×1080p @60fps(LevelA)

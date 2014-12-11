@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 simon. All rights reserved.
 //
 
-#include <stdio.h>
 #include "cis_camera.h"
 
 int setFormat(struct camera_settings settings, int newValue){
