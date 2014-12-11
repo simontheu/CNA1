@@ -71,7 +71,7 @@ set_blocking (int fd, int should_block)
 int main()
 {
 
-char *portname = "/dev/ttyO2";
+char *portname = "/dev/ttyO1";
 
 int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
 if (fd < 0)
@@ -86,9 +86,13 @@ set_blocking (fd, 0);                // set no blocking
 write (fd, "hello!\n", 7);           // send 7 character greeting
 
 usleep ((7 + 25) * 100);             // sleep enough to transmit the 7 plus
-                                     // receive 25:  approx 100 uS per char transmit
-char buf [100];
-int n = read (fd, buf, sizeof buf);  // read up to 100 characters if ready to read
 
+while(1){  
+    write (fd,"GVF\n",4);        // receive 25:  approx 100 uS per char transmit
+    usleep(100000);
+    char buf [100];
+    int n = read (fd, buf, sizeof buf);  // read up to 100 characters if ready to read
+    printf(buf);
+}
 return 0;
 }
