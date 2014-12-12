@@ -5,9 +5,13 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
-#include "serial.h"
 
+#include "serial.h"
 #include "cis_camera.h"
+
+#define RGB_GAIN_REDUCTION_FACTOR 1
+#define RGB_GAIN_MIN 0
+#define RGB_GAIN_MAX 200
 
 void error (char *msg)
 {
@@ -17,19 +21,29 @@ void error (char *msg)
 
 void sendSerialCommand(int current_cam,char *serialCommand, int fd)
 {
-    printf(" - COMMAND= %s",serialCommand);
-
-            write (fd, serialCommand, 5);           // send 7 character greeting
-            //usleep ((5 + 25) * 100);             // sleep enough to transmit the 7 plus
-                // receive 25:  approx 100 uS per char transmit
-            char buf [100];
-            int n = read (fd, buf, 100);  // read up to 100 characters if ready to read
-            printf("RECEIVED>%s",buf);
-            printf("<\n");
-
+    printf(" - COMMAND=%s",serialCommand);
+    int commandLength=strlen(serialCommand);
+    write (fd, serialCommand, commandLength);           // send 7 character greeting
+    usleep ((5 + 25) * 100);             // sleep enough to transmit the 7 plus
+    // receive 25:  approx 100 uS per char transmit
+    char buf [20];
+    int n = read (fd, buf, sizeof buf);  // read up to 100 characters if ready to read
+    if (n!=0){
+        printf("RECEIVED:%s",buf);
+    }else
+    {
+        printf("No response");
+    }
 }
 
-char* getSerialStringFor(int command[],int words)
+int proc16_signed(char msb,char lsb)
+{
+    char array[2]={lsb,msb};//endian thing i reckon
+    int16_t val= *(int16_t *)&array[0];
+    return val;
+}
+
+char* getSerialStringFor(int command[],int words,struct camera_settings current_cam_struct)
 {
     
     char *return_string;
@@ -288,15 +302,22 @@ char* getSerialStringFor(int command[],int words)
             break;
             
         case 0x22:
-            printf("Get/Set:Relative:");
+            printf("Get/Set:Relative:");//has contents
             switch (command[1]) {
-                case 0x01:
-                    printf("white_R");
-                    return_string="CBR 0\n";
+                case 0x01: ;
+                    //detect direction and amount
+                    int adjustAmount= proc16_signed(command[2],command[3]);
+                if (((current_cam_struct.r_gain + adjustAmount)> RGB_GAIN_MIN) && ((current_cam_struct.r_gain + adjustAmount) < RGB_GAIN_MIN)){
+                        printf("white_R:%d",adjustAmount);
+                        return_string="SCBR 0\n";
+                    }else{
+                        printf("white_R:Limit Reached",adjustAmount);
+                        return_string="";
+                    }
                     break;
                 case 0x02:
                     printf("white_G");
-                    return_string="CBR 200\n";
+                    return_string="SCBR 200\n";
                     break;
                 case 0x03:
                     printf("white_B");
@@ -1158,7 +1179,7 @@ char* getSerialStringFor(int command[],int words)
 }
 
 
-char* convertCommand(char* command){
+char* convertCommand(char* command,struct camera_settings current_cam_struct){
 
     int i=0; //word index
     int words=0;
@@ -1178,7 +1199,7 @@ char* convertCommand(char* command){
         printf ("%x,",subcommand[word]);
     }
     printf("\n");
-    char *serialCommand=getSerialStringFor(subcommand,words);
+    char *serialCommand=getSerialStringFor(subcommand,words,current_cam_struct);
     return serialCommand;
 }
 
@@ -1199,6 +1220,13 @@ int main (int argc, char *argv[])
     
     struct camera_settings cam1;
     struct camera_settings cam2;
+    
+    struct camera_settings current_cam_struct;
+    
+    //setup structs with default/obtained values
+    cam1.r_gain =100;
+    current_cam_struct=cam1;
+    
     
     
     //Network initialisation
@@ -1263,7 +1291,7 @@ while (1){ //MAIN PROGRAM LOOP
     if (i<30){
         command[i]=buffer[0];
         if (command[i]==10){ //decimal 10 is new line
-            char *serialCommand=convertCommand(command);
+            char *serialCommand=convertCommand(command,current_cam_struct);
             sendSerialCommand(current_cam,serialCommand,cam1.port_fd);
             bzero(buffer,256);
             bzero(command,31);
