@@ -77,11 +77,15 @@ int set_up_port(char * portname)
     set_interface_attribs (fd, B9600, 0);  // set speed to 9,600 bps, 8n1 (no parity)
     set_blocking (fd, 0);                // set no blocking
 
-    write (fd, "GVF\n", 4);           // send 7 character greeting
+    write (fd, "SVF 8\n", 6);           // set video format to 1080i 50
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
 
-    usleep ((4 + 25) * 10);             // sleep enough to transmit the 7 plus
-
-    write (fd,"GVF\n",4);        // receive 25:  approx 100 uS per char transmit
+    write (fd, "SI 0\n", 5);           // set video format to 1080i 50
+    usleep ((5 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SAL 100\n", 8);           // set video format to 1080i 50
+    usleep ((8 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
     usleep(100);
     char buf [100];
 
