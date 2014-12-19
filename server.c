@@ -64,9 +64,9 @@ int updateOCP(struct camera_settings *current_cam_struct,int sockfd)
     }
     
     int16_t black_normalised=current_cam_struct->pedestal*PEDESTAL_REL_REDUCTION_FACTOR;
-    n=sprintf(sendBlackString,"23,a9,%02X,%02X\n",(b_gain_normalised)>>8,(b_gain_normalised)%256);
+    n=sprintf(sendBlackString,"23,a9,%02X,%02X\n",(black_normalised)>>8,(black_normalised)%256);
     printf("send:",sendBlackString);
-    writeStatus= write (sockfd,sendBlackString,strlen(sendBGainString));
+    writeStatus= write (sockfd,sendBlackString,strlen(sendBlackString));
     if (writeStatus<0) {
         error("Error writing to socket");
     }
@@ -719,7 +719,6 @@ char* getSerialStringFor(int command[],int words,struct camera_settings *current
                     printf("master_black");//COMMAND USED **** "master_black"
                     //detect direction and amount
                     adjustAmount= proc16_signed(command[2],command[3])/PEDESTAL_REL_REDUCTION_FACTOR;
-                    current_cam_struct->pedestal=current_cam_struct->pedestal+adjustAmount;
                     printf("adjusted adjust!:%d",adjustAmount);
                     if (((current_cam_struct->pedestal + adjustAmount)> PEDESTAL_MIN) && ((current_cam_struct->pedestal + adjustAmount) < PEDESTAL_MAX)){
                     
@@ -730,7 +729,7 @@ char* getSerialStringFor(int command[],int words,struct camera_settings *current
                     int n=sprintf (return_string, "SPL %d\n", current_cam_struct->pedestal);
                     printf("Return string:%s",return_string);
                 }else{
-                    printf("white_R:Limit Reached",adjustAmount);
+                    printf("pedestal:Limit Reached",adjustAmount);
                     printf("struct.pedestal:%d",current_cam_struct->pedestal);
                 }
                     break;
