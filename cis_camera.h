@@ -22,6 +22,7 @@
 */
 struct camera_settings
 {
+    int cam_number;
     int port_fd;
     int format;
     /*

@@ -23,6 +23,20 @@
 #define EDGE_ENHANCEMENT_MIN -1
 #define EDGE_ENHANCEMENT_MAX 6
 
+enum {
+    CIS_SHUTTER_OPEN,
+    CIS_SHUTTER_1_60,
+    CIS_SHUTTER_1_100,
+    CIS_SHUTTER_1_120,
+    CIS_SHUTTER_1_250,
+    CIS_SHUTTER_1_500,
+    CIS_SHUTTER_1_1000,
+    CIS_SHUTTER_1_2000,
+    CIS_SHUTTER_1_4000,
+    CIS_SHUTTER_1_8000
+} shutter_setting;
+
+
 void error (char *msg)
 {
     perror(msg);
@@ -36,6 +50,8 @@ int updateOCP(struct camera_settings *current_cam_struct,int sockfd)
     char sendGGainString[15];
     char sendBGainString[15];
     char sendBlackString[15];
+    char sendDetailString[15];
+    char sendShutterString[15];
     
     int writeStatus;
     int n=0;
@@ -71,7 +87,22 @@ int updateOCP(struct camera_settings *current_cam_struct,int sockfd)
         error("Error writing to socket");
     }
     
-
+    int16_t detail_normalised=current_cam_struct->edge_enhancement*128;
+    n=sprintf(sendDetailString,"23,9b,%02X,%02X\n",(detail_normalised)>>8,(detail_normalised)%256);
+    printf("send:",sendDetailString);
+    writeStatus= write (sockfd,sendDetailString,strlen(sendDetailString));
+    if (writeStatus<0) {
+        error("Error writing to socket");
+    }
+    
+    int8_t shutter=1;//current_cam_struct->manual_shutter;
+    n=sprintf(sendShutterString,"21,00,%02X\n",shutter);
+    char *sendShutterStringLit="21,01,03\n";
+    printf("send:",sendShutterStringLit);
+    writeStatus= write (sockfd,sendShutterStringLit,strlen(sendShutterStringLit));
+    if (writeStatus<0) {
+        error("Error writing to socket");
+    }
     return 0;
 }
 
@@ -111,7 +142,7 @@ char* getSerialStringFor(int command[],int words,struct camera_settings *current
         case 0x20:
             printf("Get/Set:Relative:");
             switch (command[1]) {
-                case 0x00:
+                case 0x00://USE COMMAND
                     printf("shutter_speed");
                     break;
 
@@ -1623,6 +1654,10 @@ int main (int argc, char *argv[])
     cam1.b_gain= 200;
     cam1.pedestal=50;
     cam1.edge_enhancement=1;
+    cam1.manual_shutter=CIS_SHUTTER_OPEN;
+    cam1.cam_number=1;
+    
+    
     current_cam_struct_ptr=&cam1;
     
     
@@ -1674,6 +1709,10 @@ int main (int argc, char *argv[])
     bzero(command,31);
     int bytePosition=0,byte;
     int i=0;
+    
+    //network init stuff here
+    
+    
 while (1){ //MAIN PROGRAM LOOP
     //READ FROM NETWORK
     readStatus = read(sockfd,buffer,1);
