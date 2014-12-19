@@ -80,11 +80,36 @@ int set_up_port(char * portname)
     write (fd, "SVF 8\n", 6);           // set video format to 1080i 50
     usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
 
-    write (fd, "SI 0\n", 5);           // set video format to 1080i 50
+    write (fd, "SI 0\n", 5);           // set iris to be auto
     usleep ((5 + 25) * 10);             // sleep enough to transmit the 7 plus
     
-    write (fd, "SAL 100\n", 8);           // set video format to 1080i 50
+    write (fd, "SAL 100\n", 8);           // set auto level to max
     usleep ((8 + 25) * 10);             // sleep enough to transmit the 7 plus
+
+    write (fd, "SAS 100\n", 8);           // set auto level speed to be max
+    usleep ((8 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SGM 0\n", 6);           // set gain to be manual
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+
+    write (fd, "SGV 0\n", 6);           // set gain value to be 0
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SSM 0\n", 6);           // set shutter mode to be manual
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+
+    write (fd, "SSV 0\n", 6);           // set shutter amount to open
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SSM 0\n", 6);           // set shutter mode to be manual
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SWM 11\n", 7);           // set white balance mode to be manual
+    usleep ((7 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
+    write (fd, "SAG 0\n", 6);           // set auto gamma to off
+    usleep ((6 + 25) * 10);             // sleep enough to transmit the 7 plus
+    
     
     usleep(100);
     char buf [100];
