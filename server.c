@@ -23,6 +23,10 @@
 #define EDGE_ENHANCEMENT_MIN -1
 #define EDGE_ENHANCEMENT_MAX 6
 
+#define IRIS_REL_REDUCTION_FACTOR 3
+#define IRIS_REL_MIN -1
+#define IRIS_REL_MAX 101
+
 enum {
     CIS_SHUTTER_OPEN,
     CIS_SHUTTER_1_60,
@@ -52,6 +56,7 @@ int updateOCP(struct camera_settings *current_cam_struct,int sockfd)
     char sendBlackString[15];
     char sendDetailString[15];
     char sendShutterString[15];
+    char sendIrisString[15];
     
     int writeStatus;
     int n=0;
@@ -100,6 +105,15 @@ int updateOCP(struct camera_settings *current_cam_struct,int sockfd)
     char *sendShutterStringLit="21,01,03\n";
     printf("send:",sendShutterStringLit);
     writeStatus= write (sockfd,sendShutterStringLit,strlen(sendShutterStringLit));
+    if (writeStatus<0) {
+        error("Error writing to socket");
+    }
+    
+    int16_t iris=current_cam_struct->ae_level;
+    n=sprintf(sendIrisString,"21,00,%02X\n",(iris)>>8,(iris)%256));
+    //char *sendIrisString="21,01,03\n";
+    printf("send:",sendIrisString);
+    writeStatus= write (sockfd,sendIrisString,strlen(sendIrisString));
     if (writeStatus<0) {
         error("Error writing to socket");
     }
@@ -675,6 +689,19 @@ char* getSerialStringFor(int command[],int words,struct camera_settings *current
 
                 case 0x60:
                     printf("iris");
+                    adjustAmount= proc16_signed(command[2],command[3])/IRIS_REL_REDUCTION_FACTOR;
+                    printf("adjusted adjust!:%d",adjustAmount);
+                    if (((current_cam_struct->ae_level + adjustAmount)> EDGE_ENHANCEMENT_MIN) && ((current_cam_struct->ae_level + adjustAmount) < EDGE_ENHANCEMENT_MAX)){
+                        
+                        current_cam_struct->ae_level=current_cam_struct->ae_level+adjustAmount;
+                        printf("detail_level:%d",adjustAmount);
+                        printf("struct.edge_enhancement:%d",current_cam_struct->ae_level);
+                        int n=sprintf (return_string, "SAL %d\n", current_cam_struct->ae_level);
+                        printf("Return string:%s",return_string);
+                    }else{
+                        printf("edge_enhancement:Limit Reached",adjustAmount);
+                        printf("struct.edge_enhancement:%d",current_cam_struct->ae_level);
+                    }
                     break;
 
                 case 0x9b:
